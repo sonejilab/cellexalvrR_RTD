@@ -1,4 +1,4 @@
-# Official documenantation of the CellexalVR backend R package
+# Official documentation of the CellexalVR backend R package
 
 The documentation is build using R::bookdown.
 
