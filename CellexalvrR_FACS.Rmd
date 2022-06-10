@@ -20,21 +20,21 @@ We will 'load' this data by replacing the existing data in the example cellexalO
 First we will load the data and claculate a 3D umap.
 
 ```{r}
-library(flowCore)
+suppressWarnings(suppressMessages(library(flowCore)))
 ## let's use the flowCore example file
 file.name <- system.file("extdata","0877408774.B08",package="flowCore")
 x <- read.FCS( file.name, transformation=FALSE)
 
 pca = prcomp( t(x@exprs) )
 
-library(umap)
+suppressWarnings(suppressMessages(library(umap)))
 umap =  umap(pca$rotation, n_components=3)
 ```
 
 Next we will populate the cellexalObj with the FACS data and the 3D umap.
 
 ```{r}
-library(cellexalvrR)
+suppressWarnings(suppressMessages(library(cellexalvrR)))
 
 cellexalObj@index = apply( x@exprs, 2,log)
 
@@ -62,10 +62,24 @@ cellexalObj = check(cellexalObj)
 
 ```
 
+This is what we got here:
+
+```{r}
+cellexalObj
+```
+
+
 And finally we can export the data for the VR process:
 
 ```{r}
 export2cellexalvr( cellexalObj ,"FACS_Data")
+
+list.files(opath)
+
+```
+
+```{r, include=FALSE, eval=T}
+rm(cellexalObj)
 ```
 
 The folder FACS_data can be copied to the CellexalVR data folder and is available in the next VR session.

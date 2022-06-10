@@ -1,0 +1,6 @@
+title: "CellexalvrR - the R package powering CellexalVR"
+author: "Stefan Lang and Shamit Soneji"
+date: "`r Sys.Date()`"
+site: "bookdown::bookdown_site"
+documentclass: book
+rmd_files: ["index.Rmd", "cellexalvrRQuickStart.Rmd","CellexalvrR_FACS.Rmd" ]
