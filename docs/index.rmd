@@ -1,0 +1,8 @@
+# CellexalvrR - the R package powering CellexalVR
+
+CellexalvrR is the initial backend of the single cell analysis software CellexalVR.
+It implements main features of the VR software as calculating differentials, correlation networks and gene gene correlations. In addition the R package keeps track of the actions in VR and creates a html log of each VR session including all statistical tables, screenshots and more information.
+
+The main functionallity a 'normal' VR user is going to need is the import of a variety of data formats like a R Seurat object, Python AnnData objects or even FACS data.
+
+

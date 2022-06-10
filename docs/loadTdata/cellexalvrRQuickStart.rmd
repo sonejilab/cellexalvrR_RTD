@@ -1,0 +1,478 @@
+
+
+## Installation
+
+The easiest way to install `cellexalvrR` is directly from github using the `devtools` package:
+
+```{r,eval=F}
+library(devtools)
+install_github("sonejilab/cellexalvrR")
+```
+
+**If you are installing this on your VR workstation then make sure you install `cellexalvrR` system-wide. Right-click the R icon, and then "Run as administrator" before issuing the commands above. Also make sure that you also have the [Rtools](https://cran.r-project.org/bin/windows/Rtools/) installed on your Windows machine which provides C and C++ compilers.
+The VR log system will in addition need [pandoc](https://pandoc.org/installing.html). **
+
+# Export analyzed data for VR
+
+Here we are relying mostly on published example data from other packages.
+Several of these example data sets have only 2D dimension reduction data and therfore we provide slightly changed files (+3D drcs) on our own web page.
+
+For the sake of this vignette we set the OutPath to the CellexalVR Data path so that these example dataset become available in your VR session and the InPath to the folder we downloaded the example data to (if necessary).
+
+```{r}
+## Tell R where your CellexalVR "Data"" folder is.
+## The folder should be in the path where you unpacked CellexalVR.
+## This one is mine: 
+OutPath = "i:/CellexalVR/CellexalVR_0.14.0_build/Data/"
+## I have downloaded the data files into the R tempPath
+InPath = tempdir()
+## but to make this reproducable I'll pput the outfiles also into the tempdir
+OutPath = file.path( InPath, 'Data' )
+dir.create( OutPath )
+
+```
+
+## Default way to export data
+
+The default way to export data from cellexalvrR is the as_cellexalvrR() function.
+
+
+```{r, eval=F}
+?cellexalvrR::as_cellexalvrR
+
+as_cellexalvrR           package:cellexalvrR           R Documentation
+
+convert a supported object/file to cellexalvrR keeping all 3D drc
+objects.
+
+Description:
+
+     convert a supported data set into a cellexalvrR obejct
+
+Usage:
+
+     as_cellexalvrR(
+       x,
+       meta.cell.groups = NULL,
+       meta.genes.groups = NULL,
+       userGroups = NULL,
+       outpath = getwd(),
+       specie,
+       ...
+     )
+
+     ## S4 method for signature 'environment'
+     as_cellexalvrR(
+       x,
+       meta.cell.groups = NULL,
+       meta.genes.groups = NULL,
+       userGroups = NULL,
+       outpath = getwd(),
+       specie
+     )
+
+     ## S4 method for signature 'Seurat'
+     as_cellexalvrR(
+       x,
+       meta.cell.groups = NULL,
+       meta.genes.groups = NULL,
+       userGroups = NULL,
+       outpath = getwd(),
+       specie,
+       assay = NULL
+     )
+
+     ## S4 method for signature 'character'
+     as_cellexalvrR(
+       x,
+       meta.cell.groups = NULL,
+       meta.genes.groups = NULL,
+       userGroups = NULL,
+       outpath = getwd(),
+       specie,
+       embeddings = NULL,
+       embeddingDims = 3,
+       velocity = "scvelo",
+       scaleArrowTravel = 20,
+       minCell4gene = 10
+     )
+
+     ## S4 method for signature 'H5File'
+     as_cellexalvrR(
+       x,
+       meta.cell.groups = NULL,
+       meta.genes.groups = NULL,
+       userGroups = NULL,
+       outpath = getwd(),
+       specie,
+       embeddings = NULL,
+       embeddingDims = 3,
+       velocity = "scvelo",
+       scaleArrowTravel = 20,
+       minCell4gene = 10
+     )
+
+Arguments:
+
+       x: a Seurat object or scanpy/scvelo h5ad file
+
+meta.cell.groups: which cell annotation columns to convert to meta.cell
+
+meta.genes.groups: which annotation columns to keep (default NULL)
+
+userGroups: which cell annotation columns to add to the userGroups slot
+
+ outpath: set the outpath of the object (default getwd())
+
+  specie: set the specie to either mouse or human (default check gene
+          names)
+
+     ...: allow additional data type specififc parameters
+
+   assay: Seurat::GetAssayData parameter 'assay' to fetch the
+          expression data (default NULL)
+
+embeddings: which embeddings to import from the file (default NULL =
+          all)
+
+embeddingDims: the dimensionality of the embeddings (default 3)
+
+velocity: import velocity information (default = 'scvelo')
+
+scaleArrowTravel: scale the velovity arrow for VR (default 20)
+
+minCell4gene: savety feature for andata import required for CellexalVR
+          (default 10)
+
+Details:
+
+     This function is the default conversion function. Depending on
+     which object is to be imported the paramteters differ.
+
+```
+ 
+
+
+```{r, include=FALSE, eval=T}
+downloadFile <- function( remote, file ) {
+  file = file.path( InPath, file )
+
+  if ( file.exists( file)){
+    return (file)
+  }
+  local = file.path(InPath, basename(remote) )
+  download.file(remote, destfile = local)
+  utils::unzip( local, exdir = InPath )
+  
+  if ( file.exists( file) ){
+    return ( file )
+  }else {
+    stop( paste("expected file",file,"does not exist") )
+  }
+}
+
+
+## get rid of old out paths
+for ( p in c("PBMC", "PBMC3K", "Pancreas_scvelo", "scATAC", "CellexalOut") ){
+  p = file.path(OutPath, p)
+  if ( file.exists( p )){
+    unlink( p, recursive=TRUE)
+  }
+}
+```
+
+## A Seurat object
+
+We have a simple function to convert a Seurat object to a cellexalvrR object prior to export. To demonstrate this we will use the the Seurat pbmc_small example data. 
+
+
+```{r, fig.show='hold' }
+library(Seurat)
+library(cellexalvrR)
+
+## We will now calculate a UMAP in 3 dimensions whereas the TSNE will be using in 2D 
+
+pbmc_small <- RunUMAP(pbmc_small, dims = 1:10,n.components = 3)
+Embeddings(pbmc_small,"umap")[1,]
+
+## Now we convert the object to a cellexalvr object using 
+## the cell identity and cluster as metadata for the cells (and any others you wish):
+
+cvr <- as_cellexalvrR(pbmc_small,c("orig.ident","groups"), specie="human" )
+cvr
+
+## And here we export all data
+opath = file.path(OutPath, "PBMC")
+export2cellexalvr(cvr, opath)
+
+list.files(opath)
+
+## Done!
+```
+
+If you point the OutPath to your CellexalVR Data path you will now have the Seurat pbmc_small data set in your VR environment.
+
+It will then be available for loading when you step into CellexalVR.
+This applies to all other data sets described here, too.
+
+## Using AnnData objects
+
+ We will get the 3k PBMC h5ad file from [here](http://cellexalvr.med.lu.se/downloadable/pbmc3k.zip) and unzip. It was created using [this Scanpy tutorial](https://scanpy-tutorials.readthedocs.io/en/latest/pbmc3k.html) where the only change we made was to embed the UMAP into 3 dims using `sc.tl.umap(adata,n_components=3)` :
+
+
+```{r, include=FALSE, eval=T}
+## download the file
+downloadFile('http://cellexalvr.med.lu.se/downloadable/pbmc3k.zip', "pbmc3k.h5ad")
+```
+
+
+```{r, fig.show='hold' }
+library(cellexalvrR)
+
+cvr <- as_cellexalvrR( file.path( InPath, "pbmc3k.h5ad"), 
+  meta.cell.groups = c( "leiden") , embeddingDims = 3, 
+  specie = "human", velocity = NULL )
+
+cvr
+
+opath = file.path(OutPath,"PBMC3K")
+export2cellexalvr(cvr, opath)
+
+list.files(opath)
+
+## Done!
+```
+
+## A scvelo anndata file
+
+If you have used scvelo to caculate cell velocities then only a couple more options need to be added to the export. In this example we ran [this scvelo demo](https://scvelo.readthedocs.io/VelocityBasics.html) with two extra lines:
+
+```{r, fig.show='hold',eval=F}
+sc.tl.umap(adata,n_components=3) # embed to 3 dims
+sc.tl.leiden(adata) #get clusters
+```
+
+We can get a zip of the resulting h5ad file from [here](http://cellexalvr.med.lu.se/downloadable/pancreas_scvelo.zip). The rest is almost the same as above (in R):
+
+
+```{r, include=FALSE, eval=T}
+## download the file
+downloadFile('http://cellexalvr.med.lu.se/downloadable/pancreas_scvelo.zip', "pancreas_scvelo.h5ad")
+```
+
+```{r, fig.show='hold',eval=TRUE}
+library(cellexalvrR)
+
+cvr <- as_cellexalvrR(file.path( InPath,"pancreas_scvelo.h5ad"),
+  c("clusters","leiden"), specie="human",velocity="scvelo", 
+  scaleArrowTravel=30)
+
+## The deltas can be quite small, so in the line above we have 'scaleArrowTravel' 
+## which multiples delta by factor specified to increase the path of travel for 
+## each cell to make them more visible.
+
+## Now we create the folder and export the CellexalVR files
+opath = file.path( OutPath,"Pancreas_scvelo")
+export2cellexalvr(cvr, opath)
+
+list.files(opath)
+
+## Done!
+```
+**In general, to enable velocity visualisation in CellexalVR one supplies 6-column .mds files, where the last three columns denote the destination x/y/z coordinate for each cell**
+
+
+## A scATAC Seurat object
+
+We followed [this Seurat example](https://satijalab.org/seurat/v3.0/atacseq_integration_vignette.html), again embedding to 3 dimensions as shown above. A zip of the RDS file can be obtained [here](http://cellexalvr.med.lu.se/downloadable/pbmc.atac.zip) which is a seurat object. Exporting the data:
+
+
+```{r, include=FALSE, eval=T}
+## download the file
+downloadFile('http://cellexalvr.med.lu.se/downloadable/pbmc.atac.zip', "pbmc.atac.rds")
+```
+
+```{r, fig.show='hold',eval=TRUE}
+library(Seurat)
+library(cellexalvrR)
+
+pbmc.atac <- readRDS(file.path( InPath,"pbmc.atac.rds"))
+
+## convert the object using the gene activity assay
+cvr <- as_cellexalvrR(pbmc.atac,c("seurat_clusters"),specie="human",assay="ACTIVITY")
+cvr
+
+## We're ready to export.
+opath = file.path(OutPath,"scATAC")
+export2cellexalvr(cvr, opath)
+
+list.files(opath)
+
+#Done!
+```
+
+
+## Separate tables
+
+If you aren't using Seurat, Scanpy or Scvelo the following guide will show you how to make a cellexalVR oject from scratch using our in-built functions. The requirments are very simple and examples are shown below.
+
+The data from [Nestorowa *et al*](http://www.bloodjournal.org/content/128/8/e20.long?sso-checked=true) can be downloaded from [here](http://cellexalvr.med.lu.se/downloadable/cvrQuickStartData.zip). Unpack them and set your working directory to where they are.
+
+First, load the library:
+
+```{r, fig.show='hold',eval=T}
+library(cellexalvrR)
+
+```
+
+```{r, include=FALSE, eval=T}
+   exdata = cellexalObj@data
+   facs = cellexalObj@index
+   cell.ids = cellexalObj@meta.cell
+   diff.proj = cellexalObj@drc$diffusion
+   ddr.proj = cellexalObj@drc$DDRtree
+   tsne.proj = cellexalObj@drc$tSNE
+```
+
+Then load the data:
+```{r, fig.show='hold',eval=FALSE}
+load("exdata.RData")
+load("facs.RData")
+load("cell.ids.RData")
+load("diff.proj.RData")
+load("ddr.proj.RData")
+load("tsne.proj.RData")
+```
+
+`exdata` is a sparse matrix of highly variable genes in log2 form. The first 10 columns and 10 rows look as so:
+
+```{r, fig.show='hold',eval=T}
+exdata[1:6,1:6]
+```
+Note the cell IDs are in the column names, and the gene names are the row names.
+
+```{r, fig.show='hold',eval=T}
+class(exdata)
+```
+
+`facs` is a matrix of cell surface marker intensities captured during index sorting:
+
+```{r, fig.show='hold',eval=T}
+facs[1:6,1:6]
+```
+Cell IDs are in the row names, and the name of the surface protein in the columns.
+
+`cell.ids` is a 1/0 matrix that assigns metadata to the each cell. In this case it shows the cell type 
+each cell was sorted as:
+
+```{r, fig.show='hold',eval=T}
+cell.ids[1:6,1:6]
+```
+Cell IDs are in the row names, and the name of the meta data in the columns. A 1 is given if the cell 
+belongs to a metadata class, 0 otherwise.
+
+`diff.proj`,`tsne.proj`,and `diff.proj` are the results from three different dimension reduction methods 
+applied to `exdata`, specifically DDRTree, tSNE and diffusion map respectively. Each is a three column matrix 
+of x/y/z coordinates. For example:
+
+```{r, fig.show='hold',eval=T}
+head(diff.proj)
+```
+
+The first step is to put all the dimension reduction outputs into a single list:
+
+```{r, fig.show='hold',eval=T}
+proj.list <- list(diffusion=diff.proj,DDRtree=ddr.proj,tSNE=tsne.proj)
+```
+
+The next is to make a `cellexalvr` object by calling `MakeCellexaVRObj` and passing the required objects to it:
+
+```{r, fig.show='hold',eval=T}
+cellvr <- MakeCellexalVRObj(exdata,drc.list=proj.list,specie="mouse",
+  cell.meta=cell.ids,facs.data=facs)
+```
+In the same step we also set the specie as mouse which ensures the correct 
+transcription factor IDs are using during network construction if implemented in CellexalVR.
+
+Calling the object name will detail it's contents:
+
+```{r}
+cellvr
+```
+
+The last step is to call `export2cellexalvr` which will write the neccessary files from the `cellvr` object 
+to a specified directory:
+
+```{r, fig.show='hold',eval=T}
+opath = file.path(OutPath,"CellexalOut")
+export2cellexalvr(cvr, opath)
+
+list.files( opath )
+
+## Done!
+```
+
+All the files needed by CellexalVR are created at this point. The entire "CellexalOut/" folder should then be 
+moved/copied to the "Data" folder in your CellexalVR setup. See the [manual](https://www.cellexalvr.med.lu.se/manual)
+ for more details including a schematic of the folder structure.
+
+## Making a `cellexalvr` object from scratch
+While `MakeCellexalVRObj` is the most convenient way to make the object, sometimes you want to make one manually. 
+This is done calling `new`:
+
+```{r,fig.show='hold',eval=T}
+cell.vr.scr <- new("cellexalvr",data=Matrix::Matrix(exdata,sparse=T),drc=list(tsne=tsne.proj))
+cell.vr.scr
+```
+
+We can add another set of dimension reduction coordinates using the `addMDS2cellexalvr` function:
+
+```{r,fig.show='hold',eval=T}
+cell.vr.scr <- addDRC2cellexalvr(cell.vr.scr,ddr.proj,"DDRTree")
+cell.vr.scr
+```
+
+To add metadata for each cell use `addCellMeta2cellexalvr`:
+```{r,fig.show='hold',eval=T}
+cell.vr.scr <- addCellMeta2cellexalvr(cell.vr.scr,cell.ids)
+cell.vr.scr
+```
+
+To add FACS for each cell use `addFACS2cellexalvr`:
+```{r,fig.show='hold',eval=T}
+cell.vr.scr <- addFACS2cellexalvr(cell.vr.scr,facs)
+```
+
+Setting the specie is done using the `set.specie` function:
+
+```{r,fig.show='hold',eval=T}
+cell.vr.scr <- set.specie(cell.vr.scr,"mouse")
+cell.vr.scr
+```
+
+## Making cell metadata from a data frame
+
+CellexalVR requires metadata in the form of a 1/0 matrix, but many packages store it as a data frame. 
+CellexalvrR has function to convert a data frame into a 1/0 matrix. First, lets make a data frame:
+
+```{r,fig.show='hold',eval=T}
+meta.df <- data.frame(CellType=sample(c("Type1","Type2","Type3"),10,replace=T),
+                      Phase=sample(c("G1","G2M","S"),10,replace=T),
+                      Treatment=sample(c("WT","Dox"),10,replace=T))
+head(meta.df)
+```
+
+We can now make a correctly formatted cell metadata matrix by applying the function `make.cell.meta.from.df` 
+using only the fields we need, in this case the "CellType" and "Treatment" columns:
+```{r,fig.show='hold',eval=T}
+required.cell.metad <- make.cell.meta.from.df(meta.df,c("CellType","Treatment"))
+head(required.cell.metad)
+```
+
+It can be seen the field name is placed in the column heading preceeding a "@", and this is used by 
+CellexalVR to form catagories on the menu system, so "CellType" and "Treatment" will be on separate tabs. 
+This metadata matrix can now be added to a `cellexalvrR` object as decribed above using the `addCellMeta2cellexalvr` 
+function.
+
+
+

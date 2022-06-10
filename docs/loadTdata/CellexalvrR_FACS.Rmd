@@ -1,0 +1,72 @@
+# Off scope - Analyzing FACS data in VR
+
+Analyzing FACS data in VR is not the original scope of CellexalVR.
+In line with that we need some extra packages installed to be able to run this.
+
+```{r}
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+if (!require("flowCore", quietly = TRUE))
+	BiocManager::install("flowCore")
+if (!require("umap", quietly = TRUE))
+	install.packages( c( 'umap' ) )
+
+```
+
+What we will do here is load FACS data from a fsc file, calculate a umap from the data and load this data into a cellexalvrR object.
+We will 'load' this data by replacing the existing data in the example cellexalObj.
+
+
+First we will load the data and claculate a 3D umap.
+
+```{r}
+library(flowCore)
+## let's use the flowCore example file
+file.name <- system.file("extdata","0877408774.B08",package="flowCore")
+x <- read.FCS( file.name, transformation=FALSE)
+
+pca = prcomp( t(x@exprs) )
+
+library(umap)
+umap =  umap(pca$rotation, n_components=3)
+```
+
+Next we will populate the cellexalObj with the FACS data and the 3D umap.
+
+```{r}
+library(cellexalvrR)
+
+cellexalObj@index = apply( x@exprs, 2,log)
+
+if ( length( which( is.na(cellexalObj@index))) > 0 ) {
+	    cellexalObj@index[ which( is.na(cellexalObj@index)) ] = 0
+}
+if ( length(which(! is.finite(cellexalObj@index))) > 0 ) {
+	cellexalObj@index[ which(! is.finite(cellexalObj@index)) ] = 0
+}
+
+cellexalObj@data = Matrix( t ( cellexalObj@index ), sparse=T)
+colnames(cellexalObj@data) = paste('cell', 1:ncol(cellexalObj@data) ,sep ="_" )
+rownames(cellexalObj@data) = stringr::str_replace_all(as.vector(rownames(cellexalObj@data)) ,"\\s\\s*", "_" )
+
+rownames(cellexalObj@index) = colnames(cellexalObj@data)
+colnames(cellexalObj@index) = rownames(cellexalObj@data)
+
+cellexalObj@drc = list('umap' = umap$layout )
+rownames(cellexalObj@drc$umap)=colnames(cellexalObj@data)
+
+cellexalObj@meta.cell = cbind( "FACS_data" = rep(1, ncol(cellexalObj@data)), "saveKeep" = rep(1, ncol(cellexalObj@data)) )
+rownames(cellexalObj@meta.cell)=colnames(cellexalObj@data)
+
+cellexalObj = check(cellexalObj)
+
+```
+
+And finally we can export the data for the VR process:
+
+```{r}
+export2cellexalvr( cellexalObj ,"FACS_Data")
+```
+
+The folder FACS_data can be copied to the CellexalVR data folder and is available in the next VR session.
+
