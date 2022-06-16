@@ -1,7 +1,6 @@
-# Off scope - Analyzing FACS data in VR
+# Analyzing FACS data in VR
 
-Analyzing FACS data in VR is not the original scope of CellexalVR.
-In line with that we need some extra packages installed to be able to run this.
+To use FACS data in R and VR we have to install the packages "flowCore" and "umap":
 
 ```{r}
 if (!require("BiocManager", quietly = TRUE))
@@ -82,5 +81,5 @@ list.files(opath)
 rm(cellexalObj)
 ```
 
-The folder FACS_data can be copied to the CellexalVR data folder and is available in the next VR session.
+The folder FACS_data can be copied to the CellexalVR data folder and will be available in the next VR session.
 
